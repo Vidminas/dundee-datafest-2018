@@ -4,20 +4,25 @@ pygame.init()
 display_width = 800
 display_height = 600
 
-
-
 gameDisplay = pygame.display.set_mode((display_width, display_height))
 pygame.display.set_caption('The Monument Game')
 
 black = (0, 0, 0)
 white = (255, 255, 255)
 
-rightImg = pygame.image.load('goodPotato.jpg')
-rightImg = pygame.transform.scale(rightImg, (int((display_width * .49)), int((display_height * .8))))
-wrongImg = pygame.image.load('badPotato.jpg')
-wrongImg = pygame.transform.scale(wrongImg, (int((display_width * .49)), int((display_height * .8))))
+rightImg = pygame.image.load('goodPotato.jpg').convert()
+wrongImg = pygame.image.load('badPotato.jpg').convert()
+
+imageSize = (int((display_width * .49)), int((display_height * .8)))
+rightImg = pygame.transform.scale(rightImg, imageSize)
+wrongImg = pygame.transform.scale(wrongImg, imageSize)
+
+rightImg_rect = rightImg.get_rect(topleft=(0, 0))
+wrongImg_rect = wrongImg.get_rect(topright=(display_width, 0))
+
 font = pygame.font.Font(None, 40)
 text = font.render("Click on the good potatoe", True, white)
+text_rect = text.get_rect(center = (display_width/2, display_height * .9))
 
 clock = pygame.time.Clock()
 
@@ -29,22 +34,25 @@ while not finished:
             finished = True
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            x, y = event.pos
-            if rightImg.get_rect().collidepoint(x, y):
+            if rightImg_rect.collidepoint(event.pos):
                 text = font.render("Well done!", True, white)
+                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
 
-            if wrongImg.get_rect().collidepoint(x, y):
+            elif wrongImg_rect.collidepoint(event.pos):
                 text = font.render("You stupid", True, white)
+                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
 
-        print(event)
+            else:
+                text = font.render("Click on the good potatoe", True, white)
+                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
+
+        #print(event)
 
     gameDisplay.fill(black)
 
-    gameDisplay.blit(rightImg, (0, 0))
-    gameDisplay.blit(wrongImg, ((display_width - wrongImg.get_width()), 0))
-    gameDisplay.blit(text, text.get_rect(center = (display_width/2, display_height * .9)))
-
-
+    gameDisplay.blit(rightImg, rightImg_rect)
+    gameDisplay.blit(wrongImg, wrongImg_rect)
+    gameDisplay.blit(text, text_rect)
 
     pygame.display.update()
     clock.tick(60)
