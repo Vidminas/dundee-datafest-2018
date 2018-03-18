@@ -1,70 +1,128 @@
+import io
 import pygame
 import wikidata
-pygame.init()
+from urllib.request import urlopen
+from random         import randrange
 
-display_width = 800
-display_height = 600
+def load_image(image_url):
+    print("Reading image from " + image_url)
+    image_stream = urlopen(image_url).read()
+    image_file = io.BytesIO(image_stream)
+    return pygame.image.load(image_file)
 
-gameDisplay = pygame.display.set_mode((display_width, display_height))
-pygame.display.set_caption('The Monument Game')
+def optimise_images(site_data):
+    return [(name, img.convert()) for (name, img) in site_data]
 
-black = (0, 0, 0)
-white = (255, 255, 255)
+def next_stage(stage, realSites, fakeSites):
+    leftImage = None
+    rightImage = None
+    correct = "error"
 
-rightImg = pygame.image.load('goodPotato.jpg').convert()
-wrongImg = pygame.image.load('badPotato.jpg').convert()
+    if randrange(0, 1) == 0:
+        leftImage = realSites[stage]
+        rightImage = fakeSites[stage]
+        correct = "left"
 
-imageSize = (int((display_width * .49)), int((display_height * .8)))
-rightImg = pygame.transform.scale(rightImg, imageSize)
-wrongImg = pygame.transform.scale(wrongImg, imageSize)
+    else:
+        leftImage = fakeSites[stage]
+        rightImage = realSites[stage]
+        correct = "right"
 
-rightImg_rect = rightImg.get_rect(topleft=(0, 0))
-wrongImg_rect = wrongImg.get_rect(topright=(display_width, 0))
+    return (stage + 1, correct, leftImage, rightImage)
 
-font = pygame.font.Font(None, 40)
-text = font.render("Click on the good potatoe", True, white)
-text_rect = text.get_rect(center = (display_width/2, display_height * .9))
+if __name__ == "__main__":
+    window_title = "The Monument Game"
+    display_width = 800
+    display_height = 600
+    black = (0, 0, 0)
+    white = (255, 255, 255)
+    imageSize = (int((display_width * .49)), int((display_height * .8)))
+    textCenter = (display_width * .5, display_height * .9)
+    finished = False
+    answered = False
+    stage = 0
+    stages = 10
 
-clock = pygame.time.Clock()
+    # Gets Category A listed sites (most protected buildings in Scotland)
+    # Only those which have images
+    realSitesData = wikidata.getRealSites()
+    fakeSitesData = wikidata.getFakeSites()
+    realSites = []
+    fakeSites = []
 
-finished = False
-realSites = wikidata.getRealSites()
-fakeSites = wikidata.getFakeSites()
+    # Randomly pick 5 real and 5 fake sites
+    for i in range(stages):
+        randomIndex1 = randrange(0, len(realSitesData))
+        randomIndex2 = randrange(0, len(fakeSitesData))
+        name1, url1 = realSitesData[randomIndex1]
+        name2, url2 = fakeSitesData[randomIndex2]
+        image1 = pygame.transform.scale(load_image(url1), imageSize)
+        image2 = pygame.transform.scale(load_image(url2), imageSize)
+        realSites.append((name1, image1))
+        fakeSites.append((name2, image2))
 
-print(realSites[1:3])
-print(fakeSites[1:3])
+    # Generate Rects with image sizes and positioning
+    leftImageRect = pygame.Rect((0,0), imageSize)
+    rightImageRect = pygame.Rect((display_width-imageSize[0], 0), imageSize)
 
-while not finished:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            finished = True
+    stage, correct, leftImage, rightImage = next_stage(stage, realSites, fakeSites)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if rightImg_rect.collidepoint(event.pos):
-                text = font.render("Well done!", True, white)
-                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
+    pygame.init()
+    gameDisplay = pygame.display.set_mode((display_width, display_height))
+    pygame.display.set_caption(window_title)
 
-            elif wrongImg_rect.collidepoint(event.pos):
-                text = font.render("You stupid", True, white)
-                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
+    font = pygame.font.Font(None, 40)
+    text = font.render("Which site is in Dundee?", True, white)
+    text_rect = text.get_rect(center = textCenter)
 
-            else:
-                text = font.render("Click on the good potatoe", True, white)
-                text_rect = text.get_rect(center = (display_width/2, display_height * .9))
+    # Not really necessary but should improve performance
+    realSites = optimise_images(realSites)
+    fakeSites = optimise_images(fakeSites)
 
-        #print(event)
+    clock = pygame.time.Clock()
 
-    gameDisplay.fill(black)
+    while not finished:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                finished = True
 
-    gameDisplay.blit(rightImg, rightImg_rect)
-    gameDisplay.blit(wrongImg, wrongImg_rect)
-    gameDisplay.blit(text, text_rect)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if answered and stage == stages:
+                    finished = True
 
-    pygame.display.update()
-    clock.tick(60)
+                elif answered:
+                    stage, correct, leftImage, rightImage = next_stage(stage, realSites, fakeSites)
+                    text = font.render("Which site is in Dundee?", True, white)
+                    text_rect = text.get_rect(center = textCenter)
+                    answered = False
 
-pygame.quit()
-quit()
+                elif leftImageRect.collidepoint(event.pos) and correct == "left" or \
+                     rightImageRect.collidepoint(event.pos) and correct == "right":
+                    text = font.render("Well done! Click again to try the next stage", True, white)
+                    text_rect = text.get_rect(center = textCenter)
+                    answered = True
+
+                elif leftImageRect.collidepoint(event.pos) and correct == "right" or \
+                     rightImageRect.collidepoint(event.pos) and correct == "left":
+                    text = font.render("That was not correct :( Click again to try the next stage)", True, white)
+                    text_rect = text.get_rect(center = textCenter)
+                    answered = True
+
+                else:
+                    text = font.render("Which site is in Dundee?", True, white)
+                    text_rect = text.get_rect(center = textCenter)
+
+        gameDisplay.fill(black)
+
+        gameDisplay.blit(leftImage[1], leftImageRect)
+        gameDisplay.blit(rightImage[1], rightImageRect)
+        gameDisplay.blit(text, text_rect)
+
+        pygame.display.update()
+        clock.tick(60)
+
+    pygame.quit()
+    quit()
 
 # Ask user to input a city name
 # Ask user how many pictures
