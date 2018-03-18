@@ -1,4 +1,5 @@
 import pygame
+import wikidata
 pygame.init()
 
 display_width = 800
@@ -27,6 +28,11 @@ text_rect = text.get_rect(center = (display_width/2, display_height * .9))
 clock = pygame.time.Clock()
 
 finished = False
+realSites = wikidata.getRealSites()
+fakeSites = wikidata.getFakeSites()
+
+print(realSites[1:3])
+print(fakeSites[1:3])
 
 while not finished:
     for event in pygame.event.get():
