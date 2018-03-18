@@ -2,7 +2,7 @@ import io
 import pygame
 import wikidata
 from urllib.request import urlopen
-from random         import randrange
+from random         import random, randint
 
 window_title = "The Monument Game"
 display_width = 800
@@ -33,7 +33,7 @@ def next_stage(stage, realSites, fakeSites):
     rightImage = None
     correct = "error"
 
-    if randrange(0, 1) == 0:
+    if random() < 0.5:
         leftImage = realSites[stage]
         rightImage = fakeSites[stage]
         correct = "left"
@@ -96,6 +96,20 @@ def stage_caption(stage, old_rect, screen):
     else:
         return None
 
+def sample(iterable, n):
+    """
+    Returns @param n random items from @param iterable.
+    """
+    reservoir = []
+    for t, item in enumerate(iterable):
+        if t < n:
+            reservoir.append(item)
+        else:
+            m = randint(0,t)
+            if m < n:
+                reservoir[m] = item
+    return reservoir
+
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((display_width, display_height))
@@ -107,8 +121,8 @@ if __name__ == "__main__":
 
     # Gets Category A listed sites (most protected buildings in Scotland)
     # Only those which have images
-    realSitesData = wikidata.getRealSites()
-    fakeSitesData = wikidata.getFakeSites()
+    realSitesData = sample(wikidata.getRealSites(), stages)
+    fakeSitesData = sample(wikidata.getFakeSites(), stages)
     realSites = []
     fakeSites = []
 
@@ -116,26 +130,25 @@ if __name__ == "__main__":
     close = False
     i = 0
 
-    while i <= stages and not close:
+    while i < stages and not close:
         event = pygame.event.poll()
 
         if event.type == pygame.QUIT:
             close = True
 
         else:
+            name1, url1 = realSitesData[i]
+            name2, url2 = fakeSitesData[i]
+            image1 = pygame.transform.scale(load_image(url1), imageSize)
+            image2 = pygame.transform.scale(load_image(url2), imageSize)
+            realSites.append((name1, image1))
+            fakeSites.append((name2, image2))
+
             if i == 0:
                 rect = loading_text(0.0, None, screen)
                 pygame.display.update(rect)
 
             else:
-                randomIndex1 = randrange(0, len(realSitesData))
-                randomIndex2 = randrange(0, len(fakeSitesData))
-                name1, url1 = realSitesData[randomIndex1]
-                name2, url2 = fakeSitesData[randomIndex2]
-                image1 = pygame.transform.scale(load_image(url1), imageSize)
-                image2 = pygame.transform.scale(load_image(url2), imageSize)
-                realSites.append((name1, image1))
-                fakeSites.append((name2, image2))
                 old_rect = rect
                 rect = loading_text(i / stages * 100, old_rect, screen)
                 pygame.display.update([old_rect, rect])
